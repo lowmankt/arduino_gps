@@ -10,14 +10,24 @@
 int LED = 13;
 
 
+
 SoftwareSerial mySerial(8, 7);
 Adafruit_GPS GPS(&mySerial);
-#define GPSECHO true
+#define GPSECHO false
 
-char *globalstr = "Waiting.. ";
 
 boolean usingInterrupt = true;
 void useInterrupt(boolean);
+
+struct timedata {
+  int day;
+  int month;
+  int year;
+  int hour;
+  int mit;
+  int sec;
+};
+char global[] = {0,0,0,0,0,0};
 
 void setup() {
   Wire.begin(0);
@@ -29,7 +39,7 @@ void setup() {
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
 
   GPS.sendCommand(PGCMD_NOANTENNA);
-  
+
   useInterrupt(true);
 
 }
@@ -61,28 +71,35 @@ void useInterrupt(boolean v) {
 }
 
 void requestEvent() {
-  //Serial.println("*****GOT REQUEST*****");  
-  Wire.write(globalstr);
-  Serial.print("Sending "); Serial.println(globalstr);
+  Serial.print("Sending ");
+  Serial.println(Wire.write(global, 24));
+  Serial.println((int) global[1]);
+  //Serial.println(globalstr);
 }
 
 
 void loop() {
 
-   if (GPS.newNMEAreceived()) {
+  if (GPS.newNMEAreceived()) {
+    //Serial.println("recv");
     char *stringptr = GPS.lastNMEA();
-    
-    if (!GPS.parse(stringptr))
-      return;
-    //Serial.println("OK");
-    if(GPS.fix){
-      Serial.print("Fix");
-      strcpy(globalstr, stringptr);
-      Serial.print("UPDATED GLOBAL STR");
-      //Serial.println(strlen(globalstr));
+    if (GPS.parse(stringptr)) {
+      int hour = GPS.hour;
+      int sec = GPS.seconds;
+      int mit = GPS.minute;
+      int day = GPS.day;
+      int mon = GPS.month;
+      int year = GPS.year;
+
+      char local[] = {sec, mit, hour, day, mon, year};
+      memcpy(local, global, 24);      
+      Serial.println("Parsed");
+      Serial.println(mit);
+    }
+    else{
+      Serial.println("Dicked up");
     }
   }
-
 }
 
 
